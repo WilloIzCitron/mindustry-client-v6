@@ -1,121 +1,125 @@
-buildscript{
-    extra{
-        fun getArchHash(): String {
-            return Properties().with{ p -> p.load(file("gradle.properties").newReader()); return p }["archash"]
-        }
+fun getArchHash(): String {
+//            val p = java.util.Properties().load(java.io.FileReader("gradle.properties"));
+//            return p["archash"]
+    return "d9f2b846e51e511aa4985c32297f6cdc8552ca87"
+}
+val arcHash = "d9f2b846e51e511aa4985c32297f6cdc8552ca87"
 
-        val arcHash = getArcHash()
+buildscript{
+//    val arcHash = "d9f2b846e51e511aa4985c32297f6cdc8552ca87"
+
+    extra{
+
     }
-    
+
     repositories{
         mavenLocal()
         mavenCentral()
         google()
-        maven { url = "https://oss.sonatype.org/content/repositories/snapshots/" }
+        maven ( url = "https://oss.sonatype.org/content/repositories/snapshots/" )
         jcenter()
-        maven{ url = "https://jitpack.io" }
+        maven ( url = "https://jitpack.io" )
     }
 
     dependencies{
         classpath("com.mobidevelop.robovm:robovm-gradle-plugin:2.3.11")
         classpath("com.github.anuken:packr:-SNAPSHOT")
-        classpath("com.github.Anuken.Arc:packer:$arcHash")
-        classpath("com.github.Anuken.Arc:arc-core:$arcHash")
+        classpath("com.github.Anuken.Arc:packer:d9f2b846e51e511aa4985c32297f6cdc8552ca87")  //todo: fixme
+        classpath("com.github.Anuken.Arc:arc-core:d9f2b846e51e511aa4985c32297f6cdc8552ca87")
     }
 }
 
 allprojects{
-    apply plugin: "maven-publish"
+    apply("maven-publish")
     
     version = "release"
     group = "com.github.Anuken"
 
-    extra{
-        versionNumber = "6"
-        if(!project.hasProperty("clientBuild")) clientBuild = "0"
-        if(!project.hasProperty("updateUrl")) updateUrl = "https://api.github.com/repos/blahblahbloopster/mindustry-client-v6/releases/latest"
-        if(!project.hasProperty("versionModifier")) versionModifier = "release"
-        if(!project.hasProperty("buildversion")) buildversion = "121.0"
-        if(!project.hasProperty("versionType")) versionType = "official"
-        appName = "Mindustry"
-        steamworksVersion = "891ed912791e01fe9ee6237a6497e5212b85c256"
-        rhinoVersion = "2617981f706e50b8753155d8e15e326308be3b22"
+    extra {
+        val versionNumber = "6"
+        val clientBuild = if(!project.hasProperty("clientBuild")) "0" else project.property("clientBuild")
+        val updateUrl = if(!project.hasProperty("updateUrl")) "https://api.github.com/repos/blahblahbloopster/mindustry-client-v6/releases/latest" else project.property("updateUrl")
+        val versionModifier = if(!project.hasProperty("versionModifier")) "release" else project.property("versionModifier")
+        val buildVersion = if(!project.hasProperty("buildVersion")) "121.0" else project.property("buildVersion")
+        val versionType = if(!project.hasProperty("versionType")) "official" else project.property("versionType")
+        val appName = "Mindustry"
+        val steamworksVersion = "891ed912791e01fe9ee6237a6497e5212b85c256"
+        val rhinoVersion = "2617981f706e50b8753155d8e15e326308be3b22"
 
-        loadVersionProps = {
-            return Properties().with{p -> p.load(file("../core/assets/version.properties").newReader()); return p }
-        }
+//        fun loadVersionProps(): java.util.Properties {
+//            return Properties().with{p -> p.load(file("../core/assets/version.properties").newReader()); return p }
+//        }
 
-        debugged = {
-            return File(projectDir.parent, "../Mindustry-Debug").exists() && !project.hasProperty("release") && project.hasProperty("args")
-        }
+        fun debugged() = File(projectDir.parent, "../Mindustry-Debug").exists() && !project.hasProperty("release") && project.hasProperty("args")
 
-        localArc = {
-            return !project.hasProperty("release") && File(projectDir.parent, "../Arc").exists()
-        }
+        fun localArc() = !project.hasProperty("release") && File(projectDir.parent, "../Arc").exists()
 
-        arcModule = { String name ->
+        fun arcModule(name: String): Any {
+            var name2 = name
             if(localArc()){
-                return project(":Arc:$name")
+                return project(":Arc:$name2")
             }else{
                 //skip to last submodule
-                if(name.contains(":")) name = name.split(":").last()
-                return "com.github.Anuken.Arc:$name:${getArcHash()}"
+                if(name2.contains(":")) name2 = name2.split(":").last()
+                return "com.github.Anuken.Arc:$name2:${arcHash}"
             }
         }
 
-        generateDeployName = { String platform ->
+        fun getModifierString(): String {
+            if(versionModifier != "release"){
+                return "[" + versionModifier + "]"
+            }
+            return ""
+        }
+
+        fun getBuildVersion(): String {
+            if(!project.hasProperty("buildversion")) return "custom build"
+            return project.getProperties()["buildversion"] as String
+        }
+
+        fun getNeatVersionString(): String {
+            val buildVersion = getBuildVersion()
+            return "v$buildVersion"
+        }
+
+
+        fun generateDeployName(platform2: String): String{
+            var platform: String = platform2
             if(platform == "windows"){
                 platform += "64"
             }
             platform = platform.capitalize()
 
             if(platform.endsWith("64") || platform.endsWith("32")){
-                platform = "${platform.substring(0, platform.length() - 2)}-${platform.substring(platform.length() - 2)}bit"
+                platform = "${platform.substring(0, platform.length - 2)}-${platform.subSequence(platform.length - 2, platform.length)}bit"
             }
 
             return "[${platform}]${getModifierString()}[${getNeatVersionString()}]${appName}"
         }
 
-        getVersionString = {
-            String buildVersion = getBuildVersion()
+        fun getVersionString(): String {
+            val buildVersion = getBuildVersion()
             return "$versionNumber-$versionModifier-$buildVersion"
         }
 
-        getNeatVersionString = {
-            String buildVersion = getBuildVersion()
-            return "v$buildVersion"
-        }
-
-        getModifierString = {
-            if(versionModifier != "release"){
-                return "[${versionModifier.toUpperCase()}]"
-            }
-            return ""
-        }
-
-        getBuildVersion = {
-            if(!project.hasProperty("buildversion")) return "custom build"
-            return project.getProperties()["buildversion"]
-        }
-
-        getPackage = {
+        fun getPackage(): String {
             return project.extra.mainClassName.substring(0, project.extra.mainClassName.indexOf("desktop") - 1)
         }
 
-        findSdkDir = {
+        fun findSdkDir(): String {
             //null because IntelliJ doesn't get env variables
-            def v = System.getenv("ANDROID_HOME")
+            val v = System.getenv("ANDROID_HOME")
             if(v != null) return v
             //rootDir is null here, amazing. brilliant.
-            def file = File("local.properties")
+            val file = File("local.properties")
             if(!file.exists()) file = File("../local.properties")
-            def props = Properties().with{p -> p.load(file.newReader()); return p }
+            val props = Properties().with{p -> p.load(file.newReader()); return p }
             return props.get("sdk.dir")
         }
 
-        generateLocales = {
-            def output = "en\n"
-            def bundles = File(project(":core").projectDir, "assets/bundles/")
+        fun generateLocales() {
+            val output = "en\n"
+            val bundles = File(project(":core").projectDir, "assets/bundles/")
             bundles.listFiles().each{ other ->
                 if(other.name == "bundle.properties") return
                 output += other.name.substring("bundle".length() + 1, other.name.lastIndexOf(".")) + "\n"
@@ -124,19 +128,19 @@ allprojects{
             File(project(":core").projectDir, "assets/basepartnames").text = File(project(":core").projectDir, "assets/baseparts/").list().join("\n")
         }
 
-        writeVersion = {
-            def pfile = File(project(":core").projectDir, "assets/version.properties")
-            def props = Properties()
+        fun writeVersion() {
+            val pfile = File(project(":core").projectDir, "assets/version.properties")
+            val props = Properties()
 
             try{
                 pfile.createNewFile()
-            }catch(Exception ignored){
+            }catch(ignored: Throwable){
             }
 
             if(pfile.exists()){
                 props.load(FileInputStream(pfile))
 
-                String buildid = getBuildVersion()
+                val buildid = getBuildVersion()
                 println("Compiling with build: '$buildid'")
 
                 props["clientBuild"] = clientBuild
@@ -150,11 +154,11 @@ allprojects{
             }
         }
 
-        writeProcessors = {
+        fun writeProcessors() {
             File(rootDir, "annotations/src/main/resources/META-INF/services/").mkdirs()
-            def processorFile = File(rootDir, "annotations/src/main/resources/META-INF/services/javax.annotation.processing.Processor")
-            def text = StringBuilder()
-            def files = File(rootDir, "annotations/src/main/java")
+            val processorFile = File(rootDir, "annotations/src/main/resources/META-INF/services/javax.annotation.processing.Processor")
+            val text = StringBuilder()
+            val files = File(rootDir, "annotations/src/main/java")
             files.eachFileRecurse(groovy.io.FileType.FILES){ file ->
                 if(file.name.endsWith(".java") && (file.text.contains(" extends BaseProcessor") || (file.text.contains(" extends AbstractProcessor") && !file.text.contains("abstract class")))){
                     text.append(file.path.substring(files.path.length() + 1)).append("\n")
@@ -164,11 +168,11 @@ allprojects{
             processorFile.text = text.toString().replace(".java", "").replace("/", ".").replace("\\", ".")
         }
 
-        writePlugins = {
+        fun writePlugins() {
             File(rootDir, "annotations/src/main/resources/META-INF/services/").mkdirs()
-            def processorFile = File(rootDir, "annotations/src/main/resources/META-INF/services/com.sun.source.util.Plugin")
-            def text = StringBuilder()
-            def files = File(rootDir, "annotations/src/main/java")
+            val processorFile = File(rootDir, "annotations/src/main/resources/META-INF/services/com.sun.source.util.Plugin")
+            val text = StringBuilder()
+            val files = File(rootDir, "annotations/src/main/java")
             files.eachFileRecurse(groovy.io.FileType.FILES){ file ->
                 if(file.name.endsWith(".java") && (file.text.contains(" implements Plugin"))){
                     text.append(file.path.substring(files.path.length() + 1)).append("\n")
@@ -182,16 +186,16 @@ allprojects{
     repositories{
         mavenLocal()
         mavenCentral()
-        maven{ url "https://oss.sonatype.org/content/repositories/snapshots/" }
-        maven{ url "https://oss.sonatype.org/content/repositories/releases/" }
-        maven{ url "https://jitpack.io" }
+        maven( url="https://oss.sonatype.org/content/repositories/snapshots/" )
+        maven( url="https://oss.sonatype.org/content/repositories/releases/" )
+        maven( url="https://jitpack.io" )
         jcenter()
     }
 
     task clearCache{
         doFirst{
             delete{
-                delete "$rootDir/core/assets/cache"
+                delete("$rootDir/core/assets/cache")
             }
         }
     }
@@ -234,7 +238,7 @@ configure(subprojects - project(":annotations")){
 }
 
 project(":desktop"){
-    apply plugin: "java"
+    apply("java")
 
     compileJava.options.fork = true
 
@@ -253,13 +257,13 @@ project(":desktop"){
 }
 
 project(":ios"){
-    apply plugin: "java"
-    apply plugin: "robovm"
+    apply("java")
+    apply("robovm")
 
     task incrementConfig{
-        def vfile = file("robovm.properties")
-        def bversion = getBuildVersion()
-        def props = Properties()
+        val vfile = file("robovm.properties")
+        val bversion = getBuildVersion()
+        val props = Properties()
         if(vfile.exists()){
             props.load(FileInputStream(vfile))
         }else{
@@ -270,9 +274,9 @@ project(":ios"){
             props["app.name"] = "Mindustry"
         }
         
-        props["app.build"] = (!props.containsKey("app.build") ? 40 : props["app.build"].toInteger() + 1) + ""
+        props["app.build"] = (if (!props.containsKey("app.build")) 40 else props["app.build"].toInteger() + 1) + ""
         if(bversion != "custom build"){
-            props["app.version"] = versionNumber + "." + bversion + (bversion.contains(".") ? "" : ".0")
+            props["app.version"] = versionNumber + "." + bversion + (if (bversion.contains(".")) "" else ".0")
         }
         props.store(vfile.newWriter(), null)
     }
@@ -289,7 +293,7 @@ project(":ios"){
 }
 
 project(":core"){
-    apply plugin: "java-library"
+    apply("java-library")
 
     compileJava.options.fork = true
 
@@ -303,20 +307,20 @@ project(":core"){
 
     task copyChangelog{
         doLast{
-            def props = loadVersionProps()
-            def androidVersion = props["androidBuildCode"].toInteger() - 2
-            def loglines = file("../changelog").text.split("\n")
-            def notice = "[This is a truncated changelog, see Github for full notes]"
-            def maxLength = 460
+            val props = loadVersionProps()
+            val androidVersion = props["androidBuildCode"].toInteger() - 2
+            val loglines = file("../changelog").text.split("\n")
+            val notice = "[This is a truncated changelog, see Github for full notes]"
+            val maxLength = 460
 
-            def androidLogList = [notice] + loglines.findAll{ line -> !line.endsWith("]") || line.endsWith("[Mobile]") || line.endsWith("[Android]")}
-            def result = ""
+            val androidLogList = [notice] + loglines.findAll{ line -> !line.endsWith("]") || line.endsWith("[Mobile]") || line.endsWith("[Android]")}
+            val result = ""
             androidLogList.forEach{line ->
                 if(result.length() + line.length() + 1 < maxLength){
                     result += line + "\n"
                 }
             }
-            def changelogs = file("../fastlane/metadata/android/en-US/changelogs/")
+            val changelogs = file("../fastlane/metadata/android/en-US/changelogs/")
             File(changelogs, androidVersion + ".txt").text = (result)
         }
     }
@@ -341,7 +345,7 @@ project(":core"){
 }
 
 project(":server"){
-    apply plugin: "java"
+    apply("java")
 
     dependencies{
         implementation ( project(":core") )
@@ -350,7 +354,7 @@ project(":server"){
 }
 
 project(":tests"){
-    apply plugin: "java"
+    apply("java")
 
     dependencies{
         testImplementation ( project(":core") )
@@ -371,7 +375,7 @@ project(":tests"){
 }
 
 project(":tools"){
-    apply plugin: "java"
+    apply("java")
 
     dependencies{
         implementation ( project(":core") )
@@ -383,7 +387,7 @@ project(":tools"){
 }
 
 project(":annotations"){
-    apply plugin: "java-library"
+    apply("java-library")
 
     dependencies{
         implementation ( "com.squareup:javapoet:1.12.1" )
@@ -399,7 +403,7 @@ task deployAll{
             if(!project.hasProperty("release")) throw IllegalArgumentException("----\n\nSET THE RELEASE PROJECT PROPERTY FIRST!\n\n----")
 
             delete{
-                delete "deploy/"
+                delete("deploy/")
             }
         }
     }
