@@ -24,6 +24,11 @@ buildscript{
     }
 }
 
+plugins {
+    id "org.jetbrains.kotlin.jvm" version "1.4.21"
+    id "org.jetbrains.kotlin.kapt" version "1.4.21"
+}
+
 allprojects{
     apply plugin: 'maven'
     
@@ -207,6 +212,12 @@ allprojects{
         options.compilerArgs += ["-Xlint:deprecation"]
         dependsOn clearCache
     }
+
+//    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+//        kotlinOptions {
+//            jvmTarget = "14"
+//        }
+//    }
 }
 
 configure(project(":annotations")){
@@ -215,6 +226,16 @@ configure(project(":annotations")){
         sourceCompatibility = 8
     }
 }
+
+//configure(project(":core")){
+//    tasks.forEach(){
+//        try {
+//            options.compilerArgs += ["--enable-preview"]
+//        } catch (Exception e) {
+//            e.printStackTrace()
+//        }
+//    }
+//}
 
 //compile with java 8 compatibility for everything except the annotation project
 configure(subprojects - project(":annotations")){
@@ -293,9 +314,20 @@ project(":ios"){
 }
 
 project(":core"){
-    apply plugin: "java-library"
+//    apply plugin: "java-library"
+    apply plugin: "kotlin"
+    apply plugin: "kotlin-kapt"
 
-    compileJava.options.fork = true
+    kapt {
+        javacOptions {
+            option("--enable-preview")
+        }
+    }
+
+//    c.options.fork = true
+    compileKotlin.kotlinOptions.freeCompilerArgs += "-Xjvm-enable-preview"
+    compileKotlin.kotlinOptions.freeCompilerArgs += "--enable-preview"
+//    compileKotlin.allJvmArgs += "--enable-preview"
 
     task preGen{
         outputs.upToDateWhen{ false }
@@ -326,7 +358,7 @@ project(":core"){
     }
 
     dependencies{
-        compileJava.dependsOn(preGen)
+        compileKotlin.dependsOn(preGen)
 
         api "org.lz4:lz4-java:1.4.1"
         api arcModule("arc-core")
@@ -338,8 +370,8 @@ project(":core"){
         if(localArc() && debugged()) api arcModule("extensions:recorder")
 
         compileOnly project(":annotations")
-        annotationProcessor project(":annotations")
-        annotationProcessor 'com.github.Anuken:jabel:34e4c172e65b3928cd9eabe1993654ea79c409cd'
+        kapt 'com.github.Anuken:jabel:34e4c172e65b3928cd9eabe1993654ea79c409cd'
+        kapt project(":annotations")
 
     }
 }
@@ -390,6 +422,7 @@ project(":annotations"){
     apply plugin: "java-library"
 
     dependencies{
+//        implementation("com.squareup:kotlinpoet:1.7.2")
         implementation 'com.squareup:javapoet:1.12.1'
         implementation "com.github.Anuken.Arc:arc-core:$arcHash"
     }
