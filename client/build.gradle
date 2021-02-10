@@ -40,6 +40,7 @@ arcModule = { String name ->
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    implementation "org.jetbrains.kotlin:kotlin-reflect"
     implementation project(":core")
 //    implementation files("../core/build/libs/core-release.jar")
 //    api arcModule("arc-core")

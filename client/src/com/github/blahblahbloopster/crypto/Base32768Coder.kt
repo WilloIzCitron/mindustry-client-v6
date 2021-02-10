@@ -3,6 +3,8 @@ package com.github.blahblahbloopster.crypto
 import java.io.IOException
 import java.math.BigInteger
 import kotlin.jvm.Throws
+import kotlin.math.ceil
+import kotlin.math.floor
 
 /** You've heard of base64, now get ready for... base32768.  Encodes 15 bits of data into each unicode character,
  * which so far has not caused any problems.  If it turns out to break stuff, the [BITS] constant can be changed
@@ -11,6 +13,14 @@ import kotlin.jvm.Throws
  */
 object Base32768Coder {
     private const val BITS = 15
+
+    fun charsToRepresent(byteCount: Int): Int {
+        return ceil((byteCount * 8.0) / BITS).toInt() + 1
+    }
+
+    fun availableBytes(textLength: Int): Int {
+        return floor(((textLength - 1).toDouble() / BITS) / 8).toInt()
+    }
 
     fun encode(input: ByteArray): String {
         var inp = BigInteger(byteArrayOf(1).plus(input))
