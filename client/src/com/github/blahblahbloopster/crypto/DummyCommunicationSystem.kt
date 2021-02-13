@@ -5,6 +5,7 @@ import java.util.function.Consumer
 
 /** A dummy [CommunicationSystem] for tests.  */
 class DummyCommunicationSystem : CommunicationSystem {
+    override val maxLength: Int = 1000
     override val listeners: MutableList<(ByteArray, Int) -> Unit> = mutableListOf()
     override val id = Random().nextInt()
 

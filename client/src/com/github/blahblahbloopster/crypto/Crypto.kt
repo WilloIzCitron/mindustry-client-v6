@@ -26,6 +26,10 @@ fun ByteBuffer.bytes(num: Int): ByteArray {
     return bytes
 }
 
+fun ByteBuffer.remainingBytes(): ByteArray {
+    return bytes(remaining())
+}
+
 class KeyQuad {
     val xPrivateKey: XPrivateKey
     val xPublicKey: XPublicKey

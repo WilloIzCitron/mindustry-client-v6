@@ -14,7 +14,8 @@ interface Packet<T> {
     companion object {
 
         private val registeredTypes: List<RegisteredPacketType<*>> = listOf(
-            RegisteredPacketType(SignaturePacket::class, 1, ::SignaturePacket)
+            RegisteredPacketType(SignaturePacket::class, 1, ::SignaturePacket),
+            RegisteredPacketType(EncryptedMessagePacket::class, 2, ::EncryptedMessagePacket)
         )
 
         data class RegisteredPacketType<T : Packet<*>>(val type: KClass<T>, val id: Int, val constructor: (ByteArray, PacketHeader) -> T)
@@ -32,7 +33,7 @@ interface Packet<T> {
             for ((i, chunk) in chunked.withIndex()) {
                 Time.run(0.5f * i) {
                     val toSend = ByteBuffer.allocate(chunk.size + PacketHeader.HEADER_SIZE)
-                    PacketHeader(Instant.now().plusMillis(10_000 + (500L * i)), i, chunked.size, type).write(toSend)
+                    PacketHeader(Instant.now().plusMillis(10_000 + (500L * i)), i, chunked.size, type, id).write(toSend)
                     toSend.put(chunk.toByteArray())
                     Main.communicationSystem.send(toSend.array())
                 }
@@ -53,7 +54,15 @@ interface Packet<T> {
             if (Instant.now().isAfter(header.expirationTime)) return
 
             if (header.sequenceNumber == 0 && header.sequenceCount > 1) {
-                incoming.add(IncomingConnection(senderId, senderId, header.sequenceCount, header.type).apply { array[0] = content })
+                if (incoming.size < 100) {
+                    incoming.add(
+                        IncomingConnection(
+                            senderId,
+                            senderId,
+                            header.sequenceCount,
+                            header.type
+                        ).apply { array[0] = content })
+                }
             } else if (header.sequenceNumber == 0 && header.sequenceCount == 1) {
                 handle(content, header, senderId)
             } else {
@@ -77,6 +86,9 @@ interface Packet<T> {
                 is SignaturePacket -> {
                     Main.messageCrypto.received = MessageCrypto.ReceivedTriple(senderId, Instant.now().epochSecond, packet)
                     Main.messageCrypto.check(Main.messageCrypto.player, Main.messageCrypto.received)
+                }
+                is EncryptedMessagePacket -> {
+
                 }
             }
         }

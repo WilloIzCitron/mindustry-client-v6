@@ -7,6 +7,7 @@ import arc.util.Log
 import arc.util.Time
 import arc.util.serialization.Base64Coder
 import com.github.blahblahbloopster.Main
+import com.github.blahblahbloopster.packets.EncryptedMessagePacket
 import com.github.blahblahbloopster.packets.Packet
 import com.github.blahblahbloopster.packets.SignaturePacket
 import mindustry.Vars
@@ -14,6 +15,7 @@ import mindustry.game.EventType
 import java.nio.ByteBuffer
 import java.time.Instant
 import java.util.zip.DeflaterInputStream
+import java.util.zip.InflaterInputStream
 import kotlin.math.abs
 
 /** Provides the interface between [Crypto] and a [CommunicationSystem] */
@@ -112,22 +114,45 @@ class MessageCrypto {
         Packet.send(SignaturePacket(signature, time, Main.communicationSystem.id))
     }
 
+    fun plaintextToEncryptable(plaintext: ByteArray, time: Long, id: Int): ByteArray {
+        val buf = ByteBuffer.allocate(plaintext.size + Long.SIZE_BYTES + Int.SIZE_BYTES + Byte.SIZE_BYTES)
+        buf.putLong(time)
+        buf.putInt(id)
+        buf.put(plaintext)
+        buf.put(ENCRYPTION_VALIDITY)
+        return buf.array()
+    }
+
+    data class EncryptionMetadata(val time: Long, val id: Int, val plaintext: ByteArray)
+
+    fun decryptedToPlaintext(inp: ByteArray): EncryptionMetadata {
+        val buf = ByteBuffer.wrap(inp)
+        val time = buf.long
+        val id = buf.int
+        val plaintext = buf.bytes(buf.remaining() - 1)
+        return EncryptionMetadata(time, id, plaintext)
+    }
+
     fun encrypt(message: String, destination: KeyHolder) {
         val time = Instant.now().epochSecond
         val id = communicationSystem.id
         val compressor = DeflaterInputStream(message.toByteArray().inputStream())
         val encoded = compressor.readAllBytes()
-        val plaintext = ByteBuffer.allocate(encoded.size + Long.SIZE_BYTES + Int.SIZE_BYTES + Byte.SIZE_BYTES)
-        plaintext.putLong(time)
-        plaintext.putInt(id)
-        plaintext.put(ENCRYPTION_VALIDITY)
-        val ciphertext = destination.crypto?.encrypt(plaintext.array()) ?: return
-        val toSend = ByteBuffer.allocate(ciphertext.size + Int.SIZE_BYTES + Long.SIZE_BYTES + Int.SIZE_BYTES)
-        toSend.putInt(1)  // Encrypted messages are type 1
-        toSend.putLong(time)
-        toSend.putInt(id)
-        toSend.put(ciphertext)
-        communicationSystem.send(toSend.array())
+        val plaintext = plaintextToEncryptable(encoded, time, id)
+        val ciphertext = destination.crypto?.encrypt(plaintext) ?: return
+        Packet.send(EncryptedMessagePacket(Instant.ofEpochSecond(time), ciphertext))
+    }
+
+    fun decrypt(input: EncryptedMessagePacket, header: Packet.PacketHeader, sender: Int) {
+        val crypto = KeyFolder.keys.find { it.crypto?.decrypt(input.ciphertext)?.last() == ENCRYPTION_VALIDITY } ?: return
+        val decrypted = decryptedToPlaintext(crypto.crypto?.decrypt(input.ciphertext) ?: return)
+        if (abs(Instant.now().epochSecond - decrypted.time) > 3) {
+            return  // Expired data
+        }
+        if (decrypted.id != sender) {
+            return  // Sender doesn't match
+        }
+        println(InflaterInputStream(decrypted.plaintext.inputStream()).readAllBytes().decodeToString())
     }
 
     /** Verifies an incoming message. */
