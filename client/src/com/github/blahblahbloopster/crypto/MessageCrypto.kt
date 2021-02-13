@@ -6,10 +6,11 @@ import arc.graphics.Color
 import arc.util.Log
 import arc.util.Time
 import arc.util.serialization.Base64Coder
+import com.github.blahblahbloopster.Main
+import com.github.blahblahbloopster.packets.Packet
+import com.github.blahblahbloopster.packets.SignaturePacket
 import mindustry.Vars
 import mindustry.game.EventType
-import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
-import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
 import java.nio.ByteBuffer
 import java.time.Instant
 import java.util.zip.DeflaterInputStream
@@ -21,7 +22,7 @@ class MessageCrypto {
     var keyQuad: KeyQuad? = null
 
     var player = PlayerTriple(0, 0, "")  // Maps player ID to last sent message
-    var received = ReceivedTriple(0, 0, byteArrayOf()) // Maps player ID to last sent message
+    var received = ReceivedTriple(0, 0, null) // Maps player ID to last sent message
 
     companion object {
         private const val ENCRYPTION_VALIDITY = 0b10101010.toByte()
@@ -38,7 +39,7 @@ class MessageCrypto {
 
     data class PlayerTriple(val id: Int, val time: Long, val message: String)
 
-    data class ReceivedTriple(val id: Int, val time: Long, val signature: ByteArray)
+    data class ReceivedTriple(val id: Int, val time: Long, val signaturePacket: SignaturePacket?)
 
     fun init(communicationSystem: CommunicationSystem) {
         this.communicationSystem = communicationSystem
@@ -62,10 +63,6 @@ class MessageCrypto {
             player = PlayerTriple((event.player ?: return@on).id, Instant.now().epochSecond, event.message)
             check(player, received)
         }
-        communicationSystem.listeners.add { input, sender ->
-            received = ReceivedTriple(sender, Instant.now().epochSecond, input)
-            check(player, received)
-        }
     }
 
     fun base64public(): String? {
@@ -73,9 +70,9 @@ class MessageCrypto {
     }
 
     /** Checks the validity of a message given two triples, see above. */
-    private fun check(player: PlayerTriple, received: ReceivedTriple) {
+    fun check(player: PlayerTriple, received: ReceivedTriple) {
         if (player.id == 0 || player.time == 0L || player.message == "") return
-        if (received.id == 0 || received.time == 0L || received.signature.isEmpty()) return
+        if (received.id == 0 || received.time == 0L || received.signaturePacket == null) return
         val time = Instant.now().epochSecond
         if (abs(player.time - time) > 3 || abs(received.time - time) > 3) {
             return
@@ -86,7 +83,7 @@ class MessageCrypto {
         }
 
         for (key in KeyFolder.keys) {
-            val match = verify(player.message, player.id, received.signature, key.keys)
+            val match = verify(player.message, player.id, received.signaturePacket.signature, key.keys)
             if (match) {
                 val message = Vars.ui.chatfrag.messages.find { it.message.contains(player.message) } ?: break
                 message.backgroundColor = Color.green.cpy().mul(if (key.official) 0.75f else 0.4f)
@@ -110,14 +107,9 @@ class MessageCrypto {
 
     /** Signs an outgoing message.  Includes the sender ID and current time to prevent impersonation and replay attacks. */
     fun sign(message: String, key: KeyQuad) {
-        val time = Instant.now().epochSecond
-        val out = ByteBuffer.allocate(Crypto.signatureSize + 16)
-        out.putInt(0)  // Signatures are type 0
-        out.putLong(time)
-        out.putInt(communicationSystem.id)
-        val signature = Crypto.sign(stringToSendable(message, communicationSystem.id, time), key.edPrivateKey)
-        out.put(signature)
-        communicationSystem.send(out.array())
+        val time = Instant.now()
+        val signature = Crypto.sign(stringToSendable(message, communicationSystem.id, time.epochSecond), key.edPrivateKey)
+        Packet.send(SignaturePacket(signature, time, Main.communicationSystem.id))
     }
 
     fun encrypt(message: String, destination: KeyHolder) {
@@ -136,13 +128,6 @@ class MessageCrypto {
         toSend.putInt(id)
         toSend.put(ciphertext)
         communicationSystem.send(toSend.array())
-    }
-
-    fun handle(input: ByteArray) {
-        val buf = ByteBuffer.wrap(input)
-        val type = buf.int
-        val time = buf.long
-        val id = buf.int
     }
 
     /** Verifies an incoming message. */

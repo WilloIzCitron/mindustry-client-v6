@@ -2,6 +2,7 @@ package com.github.blahblahbloopster.packets
 
 import arc.util.Time
 import com.github.blahblahbloopster.Main
+import com.github.blahblahbloopster.crypto.MessageCrypto
 import java.nio.ByteBuffer
 import java.time.Instant
 import kotlin.random.Random
@@ -12,11 +13,11 @@ interface Packet<T> {
 
     companion object {
 
-        private val registeredTypes = listOf(
-            RegisteredPacketType(SignaturePacket::class, 1)
+        private val registeredTypes: List<RegisteredPacketType<*>> = listOf(
+            RegisteredPacketType(SignaturePacket::class, 1, ::SignaturePacket)
         )
 
-        data class RegisteredPacketType(val type: KClass<out Packet<*>>, val id: Int)
+        data class RegisteredPacketType<T : Packet<*>>(val type: KClass<T>, val id: Int, val constructor: (ByteArray, PacketHeader) -> T)
 
         private fun packetId(type: KClass<*>): Int? {
             return registeredTypes.find { it.type == type }?.id
@@ -31,7 +32,7 @@ interface Packet<T> {
             for ((i, chunk) in chunked.withIndex()) {
                 Time.run(0.5f * i) {
                     val toSend = ByteBuffer.allocate(chunk.size + PacketHeader.HEADER_SIZE)
-                    PacketHeader(Instant.now().plusMillis(10_000 + (500L * i)), i, chunked.size, type, id).write(toSend)
+                    PacketHeader(Instant.now().plusMillis(10_000 + (500L * i)), i, chunked.size, type).write(toSend)
                     toSend.put(chunk.toByteArray())
                     Main.communicationSystem.send(toSend.array())
                 }
@@ -52,36 +53,34 @@ interface Packet<T> {
             if (Instant.now().isAfter(header.expirationTime)) return
 
             if (header.sequenceNumber == 0 && header.sequenceCount > 1) {
-                incoming.add(IncomingConnection(senderId, header.id, header.sequenceCount, header.type).apply { array[0] = content })
+                incoming.add(IncomingConnection(senderId, senderId, header.sequenceCount, header.type).apply { array[0] = content })
             } else if (header.sequenceNumber == 0 && header.sequenceCount == 1) {
-                handle(content, header)
+                handle(content, header, senderId)
             } else {
-                val found = incoming.find { it.id == header.id } ?: return
+                val found = incoming.find { it.id == senderId } ?: return
                 if (found.totalPackets >= header.sequenceNumber) return
                 found.array[header.sequenceNumber] = content
 
                 if (found.done) {
                     val reduced = found.array.reduce { acc, bytes -> acc!!.plus(bytes ?: return@reduce acc) }!!
-                    handle(reduced, header)
+                    handle(reduced, header, senderId)
                     incoming.remove(found)
                 }
             }
         }
 
-        private fun handle(fullContents: ByteArray, header: PacketHeader) {
+        private fun handle(fullContents: ByteArray, header: PacketHeader, senderId: Int) {
             val packetType = registeredTypes.find { it.id == header.type } ?: return
-            val packet = packetType.type.createInstance()
-            packet.deserialize(fullContents, header)
+            val packet = packetType.constructor(fullContents, header)
 
             when (packet) {
                 is SignaturePacket -> {
-                    println(packet.original)
+                    Main.messageCrypto.received = MessageCrypto.ReceivedTriple(senderId, Instant.now().epochSecond, packet)
+                    Main.messageCrypto.check(Main.messageCrypto.player, Main.messageCrypto.received)
                 }
             }
         }
     }
-
-    fun deserialize(input: ByteArray, header: PacketHeader): T
 
     fun serialize(): ByteArray
 

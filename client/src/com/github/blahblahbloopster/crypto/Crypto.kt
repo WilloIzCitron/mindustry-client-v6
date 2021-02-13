@@ -111,9 +111,8 @@ class PublicKeyPair {
 }
 
 /**
- * Utility class that handles signing.
- * Uses ED25519 for signing.
- * For encryption, it should be modified to send keys via ED25519 or ECDH and move to AES.
+ * Utility class that handles signing and encryption/decryption.
+ * Uses ED25519 for signing and X25519+AES for encryption/decryption.
  */
 object Crypto {
     var signatureSize = 64
