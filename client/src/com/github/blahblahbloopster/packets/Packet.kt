@@ -88,7 +88,7 @@ interface Packet<T> {
                     Main.messageCrypto.check(Main.messageCrypto.player, Main.messageCrypto.received)
                 }
                 is EncryptedMessagePacket -> {
-
+                    Main.messageCrypto.decrypt(packet, header, senderId)
                 }
             }
         }

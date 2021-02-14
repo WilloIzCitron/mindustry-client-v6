@@ -84,7 +84,7 @@ class MessageCrypto {
             return
         }
 
-        for (key in KeyFolder.keys) {
+        for (key in KeyFolder) {
             val match = verify(player.message, player.id, received.signaturePacket.signature, key.keys)
             if (match) {
                 val message = Vars.ui.chatfrag.messages.find { it.message.contains(player.message) } ?: break
@@ -144,7 +144,7 @@ class MessageCrypto {
     }
 
     fun decrypt(input: EncryptedMessagePacket, header: Packet.PacketHeader, sender: Int) {
-        val crypto = KeyFolder.keys.find { it.crypto?.decrypt(input.ciphertext)?.last() == ENCRYPTION_VALIDITY } ?: return
+        val crypto = KeyFolder.find { it.crypto?.decrypt(input.ciphertext)?.last() == ENCRYPTION_VALIDITY } ?: return
         val decrypted = decryptedToPlaintext(crypto.crypto?.decrypt(input.ciphertext) ?: return)
         if (abs(Instant.now().epochSecond - decrypted.time) > 3) {
             return  // Expired data

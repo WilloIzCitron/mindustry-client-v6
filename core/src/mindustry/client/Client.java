@@ -136,6 +136,8 @@ public class Client {
             else Call.sendChatMessage("/login " + settings.getString("cnpw", ""));
         });
 
+        mapping.registerCommands(fooCommands);
+
         Events.on(WorldLoadEvent.class, event -> {
             if (Time.timeSinceMillis(lastSyncTime) > 5000) {
                 tileLogs = new TileLog[world.height()][world.width()];

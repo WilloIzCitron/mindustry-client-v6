@@ -1,6 +1,7 @@
 package mindustry.client;
 
 import arc.math.geom.Vec2;
+import arc.util.CommandHandler;
 import mindustry.gen.Player;
 
 /**
@@ -9,6 +10,8 @@ import mindustry.gen.Player;
  * If something from core needs to get something from client, add it to the interface and implement it in the client module.
  */
 public interface ClientInterface {
+
+    void registerCommands(CommandHandler handler);
 
     void showFindDialog();
 

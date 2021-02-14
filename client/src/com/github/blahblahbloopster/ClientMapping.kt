@@ -1,9 +1,12 @@
 package com.github.blahblahbloopster
 
 import arc.Core
+import arc.graphics.Color
 import arc.math.geom.Vec2
+import arc.util.CommandHandler
 import arc.util.serialization.Base64Coder
 import com.github.blahblahbloopster.crypto.Crypto
+import com.github.blahblahbloopster.crypto.KeyFolder
 import com.github.blahblahbloopster.ui.ChangelogDialog
 import com.github.blahblahbloopster.ui.FeaturesDialog
 import com.github.blahblahbloopster.ui.FindDialog
@@ -17,6 +20,18 @@ import mindustry.client.utils.FloatEmbed
 import mindustry.gen.Player
 
 class ClientMapping : ClientInterface {
+
+    override fun registerCommands(handler: CommandHandler?) {
+        handler ?: return
+        handler.register<Player>("e", "<destination> [message...]", "description") { args, _ ->
+            val key = KeyFolder.find { it.name.equals(args[0], ignoreCase = true) }
+            key ?: run {
+                Vars.ui.chatfrag.addMessage("Invalid destination", "client", Color.coral.cpy().mul(0.75f))
+                return@register
+            }
+            Main.messageCrypto.encrypt(args[1], key)
+        }
+    }
 
     override fun showFindDialog() {
         FindDialog.show()
@@ -54,10 +69,10 @@ class ClientMapping : ClientInterface {
         val generate = {
             val quad = Crypto.generateKeyQuad()
             Core.settings.dataDirectory.child("key.txt").writeString((Base64Coder.encode(quad.serialize()).concatToString()), false)
-            Main.messageCrypto?.keyQuad = quad
+            Main.messageCrypto.keyQuad = quad
         }
 
-        if (Main.messageCrypto?.keyQuad != null) {
+        if (Main.messageCrypto.keyQuad != null) {
             Vars.ui.showConfirm("Key Overwrite",
                 "This will irreversibly overwrite your key.  Are you sure you want to do this?", generate)
         } else {
