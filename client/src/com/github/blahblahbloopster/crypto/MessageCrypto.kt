@@ -6,7 +6,6 @@ import arc.graphics.Color
 import arc.util.Log
 import arc.util.Time
 import arc.util.serialization.Base64Coder
-import com.github.blahblahbloopster.Main
 import com.github.blahblahbloopster.packets.EncryptedMessagePacket
 import com.github.blahblahbloopster.packets.Packet
 import com.github.blahblahbloopster.packets.SignaturePacket
@@ -111,7 +110,7 @@ class MessageCrypto {
     fun sign(message: String, key: KeyQuad) {
         val time = Instant.now()
         val signature = Crypto.sign(stringToSendable(message, communicationSystem.id, time.epochSecond), key.edPrivateKey)
-        Packet.send(SignaturePacket(signature, time, Main.communicationSystem.id))
+        Packet.send(SignaturePacket(signature, time, communicationSystem.id))
     }
 
     fun plaintextToEncryptable(plaintext: ByteArray, time: Long, id: Int): ByteArray {
