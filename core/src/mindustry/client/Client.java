@@ -44,7 +44,7 @@ public class Client {
     /** The last position in TILE COORDS someone sent in chat or was otherwise put into the buffer. */
     public static final Vec2 lastSentPos = new Vec2();
     public static IntSet messageBlockPositions = new IntSet();
-    public static final String messageCommunicationPrefix = "IN USE FOR CHAT AUTHENTICATION, do not use";
+    public static final String messageCommunicationPrefix = "DO NOT USE";
     public static ClientInterface mapping;
     public static final byte FOO_USER = (byte) 0b10101010;
     public static final byte ASSISTING = (byte) 0b01010101;
@@ -136,8 +136,6 @@ public class Client {
             else Call.sendChatMessage("/login " + settings.getString("cnpw", ""));
         });
 
-        mapping.registerCommands(fooCommands);
-
         Events.on(WorldLoadEvent.class, event -> {
             if (Time.timeSinceMillis(lastSyncTime) > 5000) {
                 tileLogs = new TileLog[world.height()][world.width()];
@@ -182,6 +180,7 @@ public class Client {
             }
         });
         Events.on(EventType.ClientLoadEvent.class, event -> {
+            mapping.registerCommands(fooCommands);
             settings.getBoolOnce("updatevalues", () -> { // TODO: Remove this code and the updatevalues bool at some point in the future (this converts old settings to new format)
                 settings.put("reactorwarningdistance", settings.getBool("reactorwarnings", true) ? settings.getInt("reactorwarningdistance") == 0 ? 101 : settings.getInt("reactorwarningdistance") : -1);
                 settings.put("reactorsounddistance", settings.getBool("reactorwarningsounds", true) ? settings.getInt("reactorsounddistance") == 0 ? 101 : settings.getInt("reactorsounddistance") : -1);

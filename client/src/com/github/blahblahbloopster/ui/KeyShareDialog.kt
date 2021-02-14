@@ -1,9 +1,12 @@
 package com.github.blahblahbloopster.ui
 
 import arc.Core
+import arc.util.serialization.Base64Coder
 import com.github.blahblahbloopster.Main
 import com.github.blahblahbloopster.crypto.KeyFolder
+import com.github.blahblahbloopster.crypto.KeyHolder
 import com.github.blahblahbloopster.crypto.MessageCrypto
+import com.github.blahblahbloopster.crypto.PublicKeyPair
 import mindustry.Vars
 import mindustry.client.Client
 import mindustry.gen.Icon
@@ -44,8 +47,6 @@ class KeyShareDialog : BaseDialog("Key Share") {
         }
 
         private fun build() {
-            KeyFolder.folder ?: run {hide(); return}
-            val fldr = KeyFolder.folder!!
             cont.label("Imports someone else's key.  You can then receive verified messages from them," +
                     " and if they have your key you can chat with encryption.")
             cont.row()
@@ -61,7 +62,7 @@ class KeyShareDialog : BaseDialog("Key Share") {
                 if (name.isValid) {
                     try {
                         MessageCrypto.base64public(name.text) ?: return@button
-                        fldr.child("${name.text}.txt").writeString(keyInput.text)
+                        KeyFolder.add(KeyHolder(PublicKeyPair(Base64Coder.decode(keyInput.text)), name.text, false))
                         hide()
                     } catch (e: Exception) {
                         e.printStackTrace()

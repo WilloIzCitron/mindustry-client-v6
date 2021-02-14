@@ -16,9 +16,13 @@ object KeyFolder : Initializable, Iterable<KeyHolder>, MutableSet<KeyHolder> {
             keyFile.writeBytes(byteArrayOf())
         }
         keyFile.readString().lines().forEach {
-            val name = it.split(": ")[0]
-            val base64 = it.split(": ")[1]
-            keyList.add(KeyHolder(PublicKeyPair(Base64Coder.decode(base64)), name, false))
+            try {
+                val name = it.split(": ")[0]
+                val base64 = it.split(": ")[1]
+                keyList.add(KeyHolder(PublicKeyPair(Base64Coder.decode(base64)), name, false))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

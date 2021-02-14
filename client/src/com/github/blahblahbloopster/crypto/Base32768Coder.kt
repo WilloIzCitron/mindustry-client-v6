@@ -19,7 +19,7 @@ object Base32768Coder {
     }
 
     fun availableBytes(textLength: Int): Int {
-        return floor(((textLength - 1).toDouble() / BITS) / 8).toInt()
+        return floor(((textLength - 1).toDouble() * BITS) / 8).toInt()
     }
 
     fun encode(input: ByteArray): String {
