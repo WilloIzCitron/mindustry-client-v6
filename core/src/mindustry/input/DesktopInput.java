@@ -66,6 +66,12 @@ public class DesktopInput extends InputHandler{
 
     @Override
     public void buildUI(Group group){
+        group.fill(t -> {
+            VerticalGroup vGroup = new VerticalGroup();
+            t.add(vGroup);
+            t.bottom();
+            t.margin(6f);
+        });
         // Various hints
         group.fill(t -> {
             t.visible(() -> Core.settings.getBool("hints") && ui.hudfrag.shown && UnitType.alpha == 0);
