@@ -2,7 +2,9 @@ package mindustry.client.ui;
 
 import arc.func.Boolp;
 import arc.func.Prov;
+import arc.scene.Element;
 import arc.scene.ui.Label;
+import mindustry.ui.Styles;
 
 public class Hint {
 
@@ -14,9 +16,10 @@ public class Hint {
         this.message = message;
     }
 
-    public Label label() {
+    public Element label() {
         Label label = new Label(message);
         label.visible(visible);
+        label.setStyle(Styles.outlineLabel);
         return label;
     }
 }

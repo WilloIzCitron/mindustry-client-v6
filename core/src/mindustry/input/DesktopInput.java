@@ -22,6 +22,8 @@ import mindustry.client.navigation.*;
 import mindustry.client.navigation.waypoints.PayloadDropoffWaypoint;
 import mindustry.client.navigation.waypoints.PositionWaypoint;
 import mindustry.client.navigation.waypoints.Waypoint;
+import mindustry.client.ui.CustomHint;
+import mindustry.client.ui.Hint;
 import mindustry.core.*;
 import mindustry.entities.units.*;
 import mindustry.game.EventType.*;
@@ -58,6 +60,7 @@ public class DesktopInput extends InputHandler{
     /** Mouse pan speed. */
     public float panScale = 0.005f, panSpeed = 4.5f, panBoostSpeed = 11f;
     private long lastMineClicked = 0L;
+    public Seq<Hint> hints = new Seq<>();
 
     boolean showHint(){
         return ui.hudfrag.shown && Core.settings.getBool("hints") && selectRequests.isEmpty() &&
@@ -66,80 +69,61 @@ public class DesktopInput extends InputHandler{
 
     @Override
     public void buildUI(Group group){
-        group.fill(t -> {
-            VerticalGroup vGroup = new VerticalGroup();
-            t.add(vGroup);
-            t.bottom();
-            t.margin(6f);
-        });
-        // Various hints
-        group.fill(t -> {
-            t.visible(() -> Core.settings.getBool("hints") && ui.hudfrag.shown && UnitType.alpha == 0);
-            t.bottom();
-            t.table(Styles.black6, b -> {
-                b.defaults().left();
-                b.label(() -> Core.bundle.format("toggleinvis", "SHIFT + " + Core.keybinds.get(Binding.invisible_units).key.toString()));
-            }).margin(6f);
-        });
-        group.fill(t -> {
-            t.visible(() -> Core.settings.getBool("hints") && ui.hudfrag.shown && Navigation.state == NavigationState.NONE && !player.dead() && !player.unit().spawnedByCore() && !player.unit().isBuilding() && !(Core.settings.getBool("hints") && lastSchematic != null && !selectRequests.isEmpty()) && UnitType.alpha != 0);
-            t.bottom();
-            t.table(Styles.black6, b -> {
-                StringBuilder str = new StringBuilder();
-                b.defaults().left();
-                b.label(() -> Core.bundle.format("respawn", Core.keybinds.get(Binding.respawn).key.toString())).style(Styles.outlineLabel);
-            }).margin(6f);
-        });
-        group.fill(t -> {
-            t.visible(() -> Core.settings.getBool("hints") && ui.hudfrag.shown && Navigation.state == NavigationState.RECORDING && UnitType.alpha != 0);
-            t.bottom();
-            t.table(Styles.black6, b -> {
-                b.defaults().left();
-                b.label(() -> Core.bundle.format("waypoint", Core.keybinds.get(Binding.place_waypoint).key.toString())).style(Styles.outlineLabel);
-            }).margin(6f);
-        });
-        group.fill(t -> {
-            t.visible(() -> Core.settings.getBool("hints") && ui.hudfrag.shown && Navigation.state == NavigationState.FOLLOWING && UnitType.alpha != 0);
-            t.bottom();
-            t.table(Styles.black6, b -> {
-                b.defaults().left();
-                b.label(() -> Core.bundle.format("stoppath", Core.keybinds.get(Binding.stop_following_path).key.toString())).style(Styles.outlineLabel);
-            }).margin(6f);
-        });
-
-        group.fill(t -> {
+        // Hide units hint
+        hints.add(new Hint(() -> ui.hudfrag.shown && UnitType.alpha == 0, () -> Core.bundle.format("toggleinvis", "SHIFT + " + Core.keybinds.get(Binding.invisible_units).key.toString())));
+        // Respawn hint
+        hints.add(new Hint(() -> ui.hudfrag.shown && Navigation.state == NavigationState.NONE && !player.dead() && !player.unit().spawnedByCore() && !player.unit().isBuilding(), () -> Core.bundle.format("respawn", Core.keybinds.get(Binding.respawn).key.toString())));
+        // Waypoints hint
+        hints.add(new Hint(() -> ui.hudfrag.shown && Navigation.state == NavigationState.RECORDING, () -> Core.bundle.format("waypoint", Core.keybinds.get(Binding.place_waypoint).key.toString())));
+        // Following hint
+        hints.add(new Hint(() -> ui.hudfrag.shown && Navigation.state == NavigationState.FOLLOWING, () -> Core.bundle.format("stoppath", Core.keybinds.get(Binding.stop_following_path).key.toString())));
+        // Building hints
+        hints.add(new CustomHint(t -> {
             t.bottom();
             t.visible(() -> {
                 t.color.a = Mathf.lerpDelta(t.color.a, !isBuilding && !Core.settings.getBool("buildautopause") || player.unit().isBuilding() ? 1f : 0f, 0.15f);
 
-                return ui.hudfrag.shown && Core.settings.getBool("hints") && selectRequests.isEmpty() && t.color.a > 0.01f && Navigation.state == NavigationState.NONE && UnitType.alpha != 0;
+                return ui.hudfrag.shown && selectRequests.isEmpty() && t.color.a > 0.01f && Navigation.state == NavigationState.NONE && UnitType.alpha != 0;
             });
             t.touchable(() -> t.color.a < 0.1f ? Touchable.disabled : Touchable.childrenOnly);
             t.table(Styles.black6, b -> {
                 b.defaults().left();
                 b.label(() -> ((!isBuilding || !wasBuilding) && !Core.settings.getBool("buildautopause") && !player.unit().isBuilding() ?
-                    Core.bundle.format("enablebuilding", Core.keybinds.get(Binding.pause_building).key.toString()) :
-                    Core.bundle.format(isBuilding ? "pausebuilding" : "resumebuilding", Core.keybinds.get(Binding.pause_building).key.toString()) +
-                    "\n" + Core.bundle.format("cancelbuilding", Core.keybinds.get(Binding.clear_building).key.toString()) +
-                    "\n" + Core.bundle.format("selectschematic", Core.keybinds.get(Binding.schematic_select).key.toString())
+                        Core.bundle.format("enablebuilding", Core.keybinds.get(Binding.pause_building).key.toString()) :
+                        Core.bundle.format(isBuilding ? "pausebuilding" : "resumebuilding", Core.keybinds.get(Binding.pause_building).key.toString()) +
+                                "\n" + Core.bundle.format("cancelbuilding", Core.keybinds.get(Binding.clear_building).key.toString()) +
+                                "\n" + Core.bundle.format("selectschematic", Core.keybinds.get(Binding.schematic_select).key.toString())
                 )).style(Styles.outlineLabel);
             }).margin(10f);
-        });
-
-        //schematic controls
-        group.fill(t -> {
+        }));
+        // Schematic hints
+        hints.add(new CustomHint(t -> {
             t.visible(() -> ui.hudfrag.shown && lastSchematic != null && !selectRequests.isEmpty() && Navigation.state == NavigationState.NONE);
             t.bottom();
             t.table(Styles.black6, b -> {
                 b.defaults().left();
                 b.label(() -> Core.bundle.format("schematic.flip",
-                    Core.keybinds.get(Binding.schematic_flip_x).key.toString(),
-                    Core.keybinds.get(Binding.schematic_flip_y).key.toString())).style(Styles.outlineLabel).visible(() -> Core.settings.getBool("hints"));
+                        Core.keybinds.get(Binding.schematic_flip_x).key.toString(),
+                        Core.keybinds.get(Binding.schematic_flip_y).key.toString())).style(Styles.outlineLabel).visible(() -> Core.settings.getBool("hints"));
                 b.row();
                 b.table(a -> {
                     a.button("@schematic.add", Icon.save, this::showSchematicSave).colspan(2).size(250f, 50f).disabled(f -> lastSchematic == null || lastSchematic.file != null);
                 });
             }).margin(6f);
+        }));
+
+        group.fill(t -> {
+            VerticalGroup vGroup = new VerticalGroup();
+            vGroup.visible(() -> Core.settings.getBool("hints"));
+            for (Hint hint : hints) {
+                vGroup.addChild(hint.label());
+            }
+            t.table(Styles.black6, b -> {
+                b.defaults().left();
+                b.add(vGroup);
+            });
+            t.bottom();
+            t.margin(6f);
         });
     }
 
