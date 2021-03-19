@@ -36,8 +36,6 @@ public interface ClientVars {
 
     String getMessageBlockCommunicationPrefix();
 
-    ClientInterface getMapping();
-
     byte getFooUser();
 
     byte getAssisting();

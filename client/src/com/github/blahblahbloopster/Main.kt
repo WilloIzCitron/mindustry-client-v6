@@ -6,6 +6,7 @@ import arc.struct.*
 import arc.util.*
 import com.github.blahblahbloopster.communication.*
 import com.github.blahblahbloopster.crypto.*
+import com.github.blahblahbloopster.gen.VarsImpl
 import com.github.blahblahbloopster.navigation.*
 import mindustry.*
 import mindustry.client.*
@@ -24,7 +25,7 @@ object Main : ApplicationListener {
     private val buildPlanInterval = Interval(2)
 
     init {
-        vars = ClientVarsImpl
+        vars = VarsImpl
         mapping = ClientMapping()
     }
 

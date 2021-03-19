@@ -30,7 +30,7 @@ public class Client {
         registerCommands();
 
         Events.on(WorldLoadEvent.class, event -> {
-            vars.getMapping().setPluginNetworking(false);
+            mapping.setPluginNetworking(false);
             if (Time.timeSinceMillis(vars.getLastSyncTime()) > 5000) {
                 tileLogs = new TileLog[world.height()][world.width()];
             }

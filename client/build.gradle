@@ -1,5 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.4.31'
+    id "org.jetbrains.kotlin.kapt" version "1.4.31"
 }
 
 group 'com.github.blahblahbloopster'
@@ -39,7 +40,7 @@ arcModule = { String name ->
 //}
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.4.31"
     implementation project(":core")
 //    implementation files("../core/build/libs/core-release.jar")
 //    api arcModule("arc-core")
@@ -51,9 +52,38 @@ dependencies {
     // https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on
     implementation group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.68'
     implementation group: 'com.beust', name: 'klaxon', version: '5.4'  // Yes, I'm aware arc has a json system, but I don't know how to use it.
+    // https://mvnrepository.com/artifact/com.google.auto.service/auto-service
+    compileOnly project(":clientAnnotationDeclaration")
+    compileOnly project(':clientAnnotations')
+    kapt project(':clientAnnotations')
 }
 
 test {
     useJUnitPlatform()
 }
 
+task runGenerator(type: JavaExec) {
+    group = 'kotlinpoet'
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.github.blahblahbloopster.generation.GetterSetterGenerationKt'
+    // store the output instead of printing to the console:
+    standardOutput = new ByteArrayOutputStream()
+    // extension method genSource.output() can be used to obtain the output:
+    doLast {
+        ext.generated = standardOutput.toString()
+    }
+}
+
+task saveGeneratedSources {
+    group = 'kotlinpoet'
+    // use build directory
+    def outputDir = new File("/${buildDir}/generated-sources")
+    // or add to existing source files
+    def outputFile = new File(outputDir, "VarsImpl.kt")
+    doLast {
+        if(!outputDir.exists()) {
+            outputDir.mkdirs()
+        }
+        outputFile.text = tasks.runGenerator.generated
+    }
+}
