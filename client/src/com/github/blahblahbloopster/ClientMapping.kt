@@ -3,6 +3,7 @@ package com.github.blahblahbloopster
 import arc.Core
 import arc.math.geom.Vec2
 import arc.util.serialization.Base64Coder
+import com.github.blahblahbloopster.antigrief.TileLogging
 import com.github.blahblahbloopster.communication.PluginCommunicationSystem
 import com.github.blahblahbloopster.crypto.Crypto
 import com.github.blahblahbloopster.crypto.DummyCommunicationSystem
@@ -15,6 +16,7 @@ import com.github.blahblahbloopster.ui.KeyShareDialog
 import mindustry.Vars
 import mindustry.client.Client
 import mindustry.client.ClientInterface
+import mindustry.client.antigrief.TileLog
 import mindustry.client.navigation.Navigation
 import mindustry.client.utils.FloatEmbed
 import mindustry.gen.Player
@@ -76,4 +78,6 @@ class ClientMapping : ClientInterface {
             }
         }
     }
+
+    override fun getTileLog(x: Int, y: Int): TileLog? = TileLogging.getLog(x, y)
 }
