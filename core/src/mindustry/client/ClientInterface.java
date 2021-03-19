@@ -1,7 +1,9 @@
 package mindustry.client;
 
-import arc.math.geom.*;
-import mindustry.gen.*;
+import arc.math.geom.Vec2;
+import arc.util.Nullable;
+import mindustry.client.antigrief.TileLog;
+import mindustry.gen.Player;
 
 /**
  * This is an interface implemented by the client module in kotlin.
@@ -25,4 +27,6 @@ public interface ClientInterface {
     void shareKey();
 
     void setPluginNetworking(boolean enable);
+
+    @Nullable TileLog getTileLog(int x, int y);
 }

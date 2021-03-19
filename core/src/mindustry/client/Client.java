@@ -19,9 +19,6 @@ import static arc.Core.settings;
 import static mindustry.Vars.*;
 
 public class Client {
-    // TODO: Organize section below at least somewhat.
-    private static TileLog[][] tileLogs;
-    /** The last position in TILE COORDS someone sent in chat or was otherwise put into the buffer. */
     public static ClientInterface mapping;
 
     public static ClientVars vars;
@@ -31,9 +28,6 @@ public class Client {
 
         Events.on(WorldLoadEvent.class, event -> {
             mapping.setPluginNetworking(false);
-            if (Time.timeSinceMillis(vars.getLastSyncTime()) > 5000) {
-                tileLogs = new TileLog[world.height()][world.width()];
-            }
             PowerInfo.initialize();
             Navigation.stopFollowing();
             Navigation.obstacles.clear();
@@ -88,14 +82,6 @@ public class Client {
                     }
                 } catch (Exception e) { Log.info(e.getMessage()); }
         }
-    }
-
-    public static TileLog getLog(int x, int y) {
-        if (tileLogs == null) tileLogs = new TileLog[world.height()][world.width()];
-        if (tileLogs[y][x] == null) {
-            tileLogs[y][x] = new TileLog(world.tile(x, y));
-        }
-        return tileLogs[y][x];
     }
 
     private static void registerCommands(){

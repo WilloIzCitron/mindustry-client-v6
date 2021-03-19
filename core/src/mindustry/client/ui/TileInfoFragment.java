@@ -48,7 +48,8 @@ public class TileInfoFragment extends Table {
 
             TextureRegion icon = hovered.block().icon(Cicon.xlarge);
             img.setDrawable(icon.found()? icon : hovered.floor().icon(Cicon.xlarge));
-            TileLog log = Client.getLog(x, y);
+            TileLog log = Client.mapping.getTileLog(x, y);
+            if (log == null) return;
             Seq<TileLogItem> logItems = new Seq<>(log.log);
             label.setText("");
             logItems.reverse();

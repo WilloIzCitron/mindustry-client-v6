@@ -62,11 +62,11 @@ public class Tile implements Position, QuadTreeObject, Displayable{
     }
 
     public TileLog getLog(){
-        return Client.getLog(x, y);
+        return Client.mapping.getTileLog(x, y);
     }
 
     public void addToLog(TileLogItem item){
-        Client.getLog(x, y).addItem(item);
+        Client.mapping.getTileLog(x, y).addItem(item);
     }
 
     public byte relativeTo(Tile tile){

@@ -4,6 +4,7 @@ import arc.*
 import arc.math.geom.*
 import arc.struct.*
 import arc.util.*
+import com.github.blahblahbloopster.antigrief.TileLogging
 import com.github.blahblahbloopster.communication.*
 import com.github.blahblahbloopster.crypto.*
 import com.github.blahblahbloopster.gen.VarsImpl
@@ -52,6 +53,11 @@ object Main : ApplicationListener {
             communicationSystem = SwitchableCommunicationSystem(DummyCommunicationSystem(mutableListOf()))
             communicationSystem.init()
         }
+
+        Events.on(EventType.ClientLoadEvent::class.java) {
+            TileLogging.initializeGameLoad()
+        }
+
         messageCrypto = MessageCrypto()
         initializeCommunication(communicationSystem)
         messageCrypto.init(communicationClient)
