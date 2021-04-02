@@ -9,7 +9,6 @@ import com.github.blahblahbloopster.crypto.*
 import com.github.blahblahbloopster.navigation.*
 import mindustry.*
 import mindustry.client.*
-import mindustry.client.Client.*
 import mindustry.client.navigation.*
 import mindustry.client.ui.*
 import mindustry.entities.units.*
@@ -24,7 +23,7 @@ object Main : ApplicationListener {
     private val buildPlanInterval = Interval(2)
 
     init {
-        mapping = ClientMapping()
+        Client.mapping = ClientMapping()
     }
 
     /** Run on client load. */
