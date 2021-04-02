@@ -15,16 +15,30 @@ object AStarNavigator : Navigator() {
     private const val V_H_COST = 10
 
     //Blocked cells are just null Cell values in grid
-    private var grid: Array<Array<Cell>> = emptyArray()
+    private var grid = CellArray(0, 0)
     private var open = PriorityQueue<Cell>(500)
-    private var closed: Array<BooleanArray> = emptyArray()
-    private var addedCosts: Array<IntArray> = emptyArray()
     private var startX = 0
     private var startY = 0
     private var endX = 0
     private var endY = 0
     private var tileWidth = 0
     private var tileHeight = 0
+
+    @Suppress("NOTHING_TO_INLINE")  // this is fine
+    private class CellArray(val width: Int, val height: Int) {
+        private val array = Array(width * height) { Cell(x(it), y(it)) }
+
+        private inline fun x(n: Int) = n % width
+        private inline fun y(n: Int) = n / width
+
+        private inline fun n(x: Int, y: Int) = (y * width) + x
+
+        operator fun get(x: Int, y: Int) = array[n(x, y)]
+
+        operator fun set(x: Int, y: Int, value: Cell) {
+            array[n(x, y)] = value
+        }
+    }
 
     private inline fun d8(cons: (x: Int, y: Int) -> Unit) {
         cons(-1, -1)
@@ -53,7 +67,7 @@ object AStarNavigator : Navigator() {
     }
 
     private fun checkAndUpdateCost(current: Cell, t: Cell, cost: Int) {
-        if (closed[t.x][t.y]) return
+        if (t.closed) return
         val tFinalCost = t.heuristicCost + cost
 
         val inOpen = open.contains(t)  // O(N)
@@ -66,18 +80,18 @@ object AStarNavigator : Navigator() {
 
     private fun aStarSearch() {
         //add the start location to open list.
-        startX = startX.clamp(0, grid.size - 1)
-        startY = startY.clamp(0, grid[0].size - 1)
-        open.add(grid[startX][startY])
+        startX = startX.clamp(0, grid.width - 1)
+        startY = startY.clamp(0, grid.height - 1)
+        open.add(grid[startX, startY])
 
-        endX = endX.clamp(0, grid.size - 1)
-        endY = endY.clamp(0, grid[0].size - 1)
+        endX = endX.clamp(0, grid.width - 1)
+        endY = endY.clamp(0, grid.height - 1)
 
         var current: Cell?
         while (true) {
             current = open.poll() ?: break  // Get a tile to explore
-            closed[current.x][current.y] = true  // Don't go through it again
-            if (current == grid[endX][endY]) {  // Made it to the finish
+            current.closed = true  // Don't go through it again
+            if (current == grid[endX, endY]) {  // Made it to the finish
                 return
             }
 
@@ -93,13 +107,14 @@ object AStarNavigator : Navigator() {
                 // Add to the open list with calculated cost
                 checkAndUpdateCost(
                         current,
-                        grid[x][y],
-                        current.finalCost + addedCosts[x][y]
+                        grid[x, y],
+                        current.finalCost + grid[x, y].addedCosts
                 )
             }
         }
     }
 
+    private fun sq(inp: Float) = inp * inp
 
     override fun findPath(start: Vec2?, end: Vec2?, obstacles: Array<Circle>?, width: Float, height: Float): Array<Vec2>? {
         start ?: return null
@@ -123,20 +138,8 @@ object AStarNavigator : Navigator() {
         val ex = World.toTile(end.x)
         val ey = World.toTile(end.y)
 
-        if (grid.size != tileWidth || grid.getOrNull(0)?.size != tileHeight) {
-            grid = Array(tileWidth) { x -> Array(tileHeight) { y -> Cell(x, y) } }
-        }
-
-        if (closed.size == tileWidth && closed.getOrNull(0)?.size == tileHeight) {
-            closed.forEach { it.fill(false) }
-        } else {
-            closed = Array(tileWidth) { BooleanArray(tileHeight) }
-        }
-
-        if (addedCosts.size == tileWidth && addedCosts.getOrNull(0)?.size == tileHeight) {
-            addedCosts.forEach { it.fill(0) }
-        } else {
-            addedCosts = Array(tileWidth) { IntArray(tileHeight) }
+        if (grid.width != tileWidth || grid.height != tileHeight) {
+            grid = CellArray(tileWidth, tileHeight)
         }
 
         open.clear()
@@ -149,39 +152,39 @@ object AStarNavigator : Navigator() {
         // Reset all cells
         for (x in 0 until tileWidth) {
             for (y in 0 until tileHeight) {
-                grid[x][y].finalCost = 0
-                grid[x][y].parent = null
+                grid[x, y].finalCost = 0
+                grid[x, y].parent = null
                 val small = min(abs(x - endX), abs(y - endY))
-                grid[x][y].heuristicCost = 14 * small + 10 * (max(abs(x - endX), abs(y - endY)) - small)
+                grid[x, y].heuristicCost = DIAGONAL_COST * small + V_H_COST * (max(abs(x - endX), abs(y - endY)) - small)
+                grid[x, y].closed = false
+                grid[x, y].addedCosts = 0
             }
         }
-        grid[px][py].finalCost = 0
 
         for (turret in obstacles) {
-            val lowerXBound = ((turret.x - turret.radius) / tilesize).toInt()
-            val upperXBound = ((turret.x + turret.radius) / tilesize).toInt()
-            val lowerYBound = ((turret.y - turret.radius) / tilesize).toInt()
-            val upperYBound = ((turret.y + turret.radius) / tilesize).toInt()
+            val lowerXBound = ((turret.x - turret.radius) / tilesize).toInt().clamp(0, tileWidth)
+            val upperXBound = ((turret.x + turret.radius) / tilesize).toInt().clamp(0, tileWidth)
+            val lowerYBound = ((turret.y - turret.radius) / tilesize).toInt().clamp(0, tileHeight)
+            val upperYBound = ((turret.y + turret.radius) / tilesize).toInt().clamp(0, tileHeight)
             for (x in lowerXBound..upperXBound) {
+                val thresh = sq(turret.radius / tilesize) - sq(x.toFloat() - (turret.x / tilesize))
+
                 for (y in lowerYBound..upperYBound) {
-
-                    if (x >= tileWidth || x < 0 || y >= tileHeight || y < 0 || addedCosts[x][y] != 0) continue
-
-                    if (turret.contains(x * tilesize.toFloat(), y * tilesize.toFloat())) {
-                        addedCosts[x][y] = 10000
+                    if (sq((y.toFloat() - (turret.y / tilesize))) <= thresh) {
+                        grid[x, y].addedCosts += 1000
                     }
                 }
             }
         }
 
-        grid[px][py] = Cell(px, py)
+        grid[px, py] = Cell(px, py)
 
         aStarSearch()
 
-        return if (closed[endX][endY]) {
+        return if (grid[endX, endY].closed) {
             val points = mutableListOf<Vec2>()
             //Trace back the path
-            var current: Cell? = grid[endX][endY]
+            var current: Cell? = grid[endX, endY]
             while (current?.parent != null) {
                 points.add(Vec2(World.unconv(current.parent!!.x.toFloat()), World.unconv(current.parent!!.y.toFloat())))
                 current = current.parent
@@ -196,9 +199,11 @@ object AStarNavigator : Navigator() {
     }
 
     class Cell(var x: Int, var y: Int) : Comparable<Cell> {
+        var closed = false
         var heuristicCost = 0 //Heuristic cost
         var finalCost = 0 //G+H
         var parent: Cell? = null
+        var addedCosts = 0
 
         override fun toString(): String {
             return "[$x, $y]"
