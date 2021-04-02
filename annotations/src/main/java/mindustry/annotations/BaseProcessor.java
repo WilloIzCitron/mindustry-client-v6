@@ -60,7 +60,7 @@ public abstract class BaseProcessor extends AbstractProcessor{
     }
 
     public static String getDefault(String value){
-        switch(value){
+        switch(value.toLowerCase()){
             case "float":
             case "double":
             case "int":
@@ -78,7 +78,7 @@ public abstract class BaseProcessor extends AbstractProcessor{
 
     //in bytes
     public static int typeSize(String kind){
-        switch(kind){
+        switch(kind.toLowerCase()){
             case "boolean":
             case "byte":
                 return 1;

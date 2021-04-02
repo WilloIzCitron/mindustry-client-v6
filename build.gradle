@@ -23,6 +23,11 @@ buildscript{
     }
 }
 
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.4.32'
+    id "org.jetbrains.kotlin.kapt" version "1.4.32"
+}
+
 allprojects{
     apply plugin: 'maven-publish'
     
@@ -295,8 +300,18 @@ project(":ios"){
 
 project(":core"){
     apply plugin: "java-library"
+    apply plugin: "kotlin"
+    apply plugin: "kotlin-kapt"
 
     compileJava.options.fork = true
+
+//    compileJava.options.compilerArgs.add("-source")
+//    compileJava.options.compilerArgs.add("14")
+//    compileJava.options.compilerArgs.add("-target")
+//    compileJava.options.compilerArgs.add("14")
+//    compileJava.options.compilerArgs.remove("--release")
+//    compileJava.options.compilerArgs.remove("8")
+//    println(compileJava.options.compilerArgs)
 
     task preGen{
         outputs.upToDateWhen{ false }
@@ -307,9 +322,9 @@ project(":core"){
     }
 
     task copyChangelog{
-        doLast{
+        doLast {
             def props = loadVersionProps()
-            def androidVersion = props['androidBuildCode'].toInteger() - 2
+            int androidVersion = props['androidBuildCode'].toInteger() - 2
             def loglines = file("../changelog").text.split("\n")
             def notice = "[This is a truncated changelog, see Github for full notes]"
             def maxLength = 460
@@ -321,7 +336,7 @@ project(":core"){
                     result += line + "\n"
                 }
             }
-            def changelogs = file("../fastlane/metadata/android/en-US/changelogs/")
+            File changelogs = file("../fastlane/metadata/android/en-US/changelogs/")
             new File(changelogs, androidVersion + ".txt").text = (result)
         }
     }
@@ -350,6 +365,14 @@ project(":core"){
         archives assetsJar
     }
 
+    kapt {
+        javacOptions {
+            option("-source", "14")
+            option("-target", "1.8")
+            option("--enable-preview")
+        }
+    }
+
     dependencies{
         compileJava.dependsOn(preGen)
 
@@ -362,11 +385,11 @@ project(":core"){
         api "com.github.Anuken:rhino:$rhinoVersion"
         if(localArc() && debugged()) api arcModule("extensions:recorder")
 
-        implementation "org.jetbrains.kotlin:kotlin-stdlib:1.4.20"
+        implementation "org.jetbrains.kotlin:kotlin-stdlib:1.4.32"
 
-        compileOnly project(":annotations")
-        annotationProcessor project(":annotations")
         annotationProcessor 'com.github.Anuken:jabel:34e4c172e65b3928cd9eabe1993654ea79c409cd'
+        compileOnly project(":annotations")
+        kapt project(":annotations")
 
     }
 
